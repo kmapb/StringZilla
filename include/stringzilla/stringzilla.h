@@ -103,13 +103,7 @@
 /**
  *  @brief  Annotation for the public API symbols.
  */
-#if defined(_WIN32) || defined(__CYGWIN__)
-#define SZ_PUBLIC __declspec(dllexport) inline static
-#elif __GNUC__ >= 4
-#define SZ_PUBLIC __attribute__((visibility("default"))) inline static
-#else
-#define SZ_PUBLIC inline static
-#endif
+#define SZ_PUBLIC   inline static
 #define SZ_INTERNAL inline static
 
 /**

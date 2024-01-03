@@ -5,7 +5,7 @@ project(
   LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 # Set a default build type to "Release" if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -83,16 +83,12 @@ function(set_compiler_flags target)
   set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
     ${CMAKE_BINARY_DIR})
 
-  # Maximum warnings level & warnings as error
-  # add_compile_options(
-  # "$<$<CXX_COMPILER_ID:MSVC>:/W4;/WX>"
-  # "$<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic;-Werror>"
-  # "$<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Werror>"
-  # "$<$<CXX_COMPILER_ID:AppleClang>:-Wall;-Wextra;-pedantic;-Werror>"
-  # )
+  # Warnings as errors: nice line to hold
+
   if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
     target_compile_options(${target} PRIVATE "-march=native")
     target_compile_options(${target} PRIVATE "-fmax-errors=1")
+    target_compile_options(${target} PRIVATE "-Werror")
     target_compile_options(${target} PRIVATE
       "$<$<CONFIG:Release>:-O3>"
       "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-g>")
@@ -100,6 +96,7 @@ function(set_compiler_flags target)
     target_compile_options(${target} PRIVATE "-xHost")
   elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     # MSVC specific flags or other settings
+    target_compile_options(${target} PRIVATE "-WX")
   endif()
 endfunction()
 
