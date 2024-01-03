@@ -1093,7 +1093,7 @@ static PyObject *Str_levenshtein(PyObject *self, PyObject *args, PyObject *kwarg
     sz_memory_allocator_t reusing_allocator;
     reusing_allocator.allocate = &temporary_memory_allocate;
     reusing_allocator.free = &temporary_memory_free;
-    reusing_allocator.user_data = &temporary_memory;
+    reusing_allocator.handle = &temporary_memory;
 
     sz_size_t distance =
         sz_levenshtein(str1.start, str1.length, str2.start, str2.length, (sz_size_t)bound, &reusing_allocator);

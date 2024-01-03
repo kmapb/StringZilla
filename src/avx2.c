@@ -2,6 +2,14 @@
 
 #if SZ_USE_X86_AVX2
 #include <x86intrin.h>
+#include <stdint.h>
+
+typedef union {
+    uint64_t u64;
+    uint32_t u16s[sizeof(uint64_t) / sizeof(uint32_t)];
+    uint16_t u32s[sizeof(uint64_t) / sizeof(uint16_t)];
+    uint8_t u8s[sizeof(uint64_t) / sizeof(uint8_t)];
+} u64_parts_t;
 
 SZ_PUBLIC sz_cptr_t sz_find_byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_t n) {
 
@@ -22,7 +30,7 @@ SZ_PUBLIC sz_cptr_t sz_find_byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_t
 }
 
 SZ_PUBLIC sz_cptr_t sz_find_2byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_t n) {
-    sz_u64_parts_t n_parts;
+    u64_parts_t n_parts;
     n_parts.u64 = 0;
     n_parts.u8s[0] = n[0];
     n_parts.u8s[1] = n[1];
@@ -48,7 +56,7 @@ SZ_PUBLIC sz_cptr_t sz_find_2byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_
 }
 
 SZ_PUBLIC sz_cptr_t sz_find_4byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_t n) {
-    sz_u64_parts_t n_parts;
+    u64_parts_t n_parts;
     n_parts.u64 = 0;
     n_parts.u8s[0] = n[0];
     n_parts.u8s[1] = n[1];
@@ -92,7 +100,7 @@ SZ_PUBLIC sz_cptr_t sz_find_4byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_
 }
 
 SZ_PUBLIC sz_cptr_t sz_find_3byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_t n) {
-    sz_u64_parts_t n_parts;
+    u64_parts_t n_parts;
     n_parts.u64 = 0;
     n_parts.u8s[0] = n[0];
     n_parts.u8s[1] = n[1];
@@ -100,7 +108,7 @@ SZ_PUBLIC sz_cptr_t sz_find_3byte_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_
 
     // This implementation is more complex than the `sz_find_4byte_avx2`,
     // as we are going to match only 3 bytes within each 4-byte word.
-    sz_u64_parts_t mask_parts;
+    u64_parts_t mask_parts;
     mask_parts.u64 = 0;
     mask_parts.u8s[0] = mask_parts.u8s[1] = mask_parts.u8s[2] = 0xFF, mask_parts.u8s[3] = 0;
 
@@ -144,7 +152,6 @@ SZ_PUBLIC sz_cptr_t sz_find_avx2(sz_cptr_t h, sz_size_t h_length, sz_cptr_t n, s
     case 2: return sz_find_2byte_avx2(h, h_length, n);
     case 3: return sz_find_3byte_avx2(h, h_length, n);
     case 4: return sz_find_4byte_avx2(h, h_length, n);
-    default:
     }
 
     // For longer needles, use exact matching for the first 4 bytes and then check the rest

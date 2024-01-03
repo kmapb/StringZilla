@@ -175,6 +175,9 @@
 #endif
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #define SZ_ASSERT(condition, message, ...)                                                                  \
     do {                                                                                                    \
         if (!(condition)) {                                                                                 \
