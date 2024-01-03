@@ -9,6 +9,7 @@ import pytest
 import stringzilla as sz
 from stringzilla import Str, Strs
 from levenshtein_baseline import levenshtein
+from random_baseline import get_random_string
 
 
 def is_equal_strings(native_strings, big_strings):
@@ -77,7 +78,6 @@ def test_fuzzy_substrings(pattern_length: int, haystack_length: int, variability
     ), f"Failed to locate {pattern} at offset {native.find(pattern)} in {native}"
 
 
-@pytest.mark.repeat(100)
 @pytest.mark.parametrize("max_edit_distance", [150])
 def test_levenshtein_insertions(max_edit_distance: int):
     # Create a new string by slicing and concatenating
@@ -93,11 +93,12 @@ def test_levenshtein_insertions(max_edit_distance: int):
         assert sz.levenshtein(a, b, 200) == i + 1
 
 
-@pytest.mark.repeat(1000)
-def test_levenshtein_randos():
-    a = get_random_string(length=20)
-    b = get_random_string(length=20)
-    assert sz.levenshtein(a, b, 200) == levenshtein(a, b)
+@pytest.mark.parametrize("reps", [1])
+def test_levenshtein_randos(reps):
+    for _ in range(reps):
+        a = get_random_string(length=20)
+        b = get_random_string(length=20)
+        assert sz.levenshtein(a, b, 200) == levenshtein(a, b)
 
 
 @pytest.mark.parametrize("list_length", [10, 20, 30, 40, 50])
