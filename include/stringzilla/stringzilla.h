@@ -1065,19 +1065,6 @@ SZ_INTERNAL sz_u64_vec_t sz_u64_load(sz_cptr_t ptr) {
 #endif
 }
 
-SZ_INTERNAL sz_ptr_t _sz_memory_allocate_for_static_buffer(sz_size_t length, sz_string_view_t *string_view) {
-    if (length > string_view->length) return NULL;
-    return (sz_ptr_t)string_view->start;
-}
-
-SZ_INTERNAL void _sz_memory_free_for_static_buffer(sz_ptr_t start, sz_size_t length, sz_string_view_t *string_view) {}
-
-SZ_PUBLIC void sz_memory_allocator_init_for_static_buffer(sz_string_view_t buffer, sz_memory_allocator_t *alloc) {
-    alloc->allocate = (sz_memory_allocate_t)_sz_memory_allocate_for_static_buffer;
-    alloc->free = (sz_memory_free_t)_sz_memory_free_for_static_buffer;
-    alloc->handle = &buffer;
-}
-
 #pragma endregion
 
 #pragma region Serial Implementation
@@ -1757,6 +1744,8 @@ SZ_INTERNAL sz_size_t _sz_levenshtein_serial_over256bytes( //
     return result;
 }
 
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 SZ_PUBLIC sz_size_t sz_levenshtein_serial( //
     sz_cptr_t a, sz_size_t a_length,       //
     sz_cptr_t b, sz_size_t b_length,       //
@@ -1787,6 +1776,7 @@ SZ_PUBLIC sz_size_t sz_levenshtein_serial( //
     else
         return _sz_levenshtein_serial_over256bytes(a, a_length, b, b_length, bound, alloc);
 }
+#pragma GCC pop_options
 
 SZ_PUBLIC sz_ssize_t sz_alignment_score_serial(       //
     sz_cptr_t a, sz_size_t a_length,                  //

@@ -111,4 +111,8 @@ if(${STRINGZILLA_BUILD_TEST})
   add_executable(stringzilla_search_test scripts/search_test.cpp)
   set_compiler_flags(stringzilla_search_test)
   add_test(NAME stringzilla_search_test COMMAND stringzilla_search_test)
+
+  add_executable(stringzilla_levenshtein_test scripts/levenshtein_test.cpp)
+  set_compiler_flags(stringzilla_levenshtein_test)
+  add_test(NAME stringzilla_levenshtein_test COMMAND stringzilla_levenshtein_test)
 endif()
