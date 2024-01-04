@@ -268,8 +268,8 @@ SZ_PUBLIC void sz_u8_set_invert(sz_u8_set_t *f) {
         f->_u64s[2] ^= 0xFFFFFFFFFFFFFFFFull, f->_u64s[3] ^= 0xFFFFFFFFFFFFFFFFull;
 }
 
-typedef sz_ptr_t (*sz_memory_allocate_t)(sz_size_t, void *);
-typedef void (*sz_memory_free_t)(sz_ptr_t, sz_size_t, void *);
+typedef void* (*sz_memory_allocate_t)(sz_size_t, void *);
+typedef void (*sz_memory_free_t)(void*, sz_size_t, void *);
 typedef sz_u64_t (*sz_random_generator_t)(void *);
 
 /**
@@ -951,41 +951,36 @@ SZ_INTERNAL sz_i32_t sz_i32_min_of_two(sz_i32_t x, sz_i32_t y) { return y + ((x 
  *  @note This function uses compiler-specific intrinsics or built-ins
  *        to achieve the computation. It's designed to work with GCC/Clang and MSVC.
  */
-SZ_INTERNAL sz_size_t sz_size_log2i(sz_size_t n) {
-    if (n == 0) return 0;
-
-#ifdef _WIN64
-#if defined(_MSC_VER)
+SZ_INTERNAL int sz_leading_zeros64(sz_u64_t n) {
+    if (n == 0) return 64;
+#ifdef _MSC_VER
     unsigned long index;
     if (_BitScanReverse64(&index, n)) return index;
-    return 0; // This line might be redundant due to the initial check, but it's safer to include it.
+    abort(); // unreachable
 #else
-    return 63 - __builtin_clzll(n);
+    return __builtin_clzll(n);
 #endif
-#elif defined(_WIN32)
-#if defined(_MSC_VER)
-    unsigned long index;
-    if (_BitScanReverse(&index, n)) return index;
-    return 0; // Same note as above.
-#else
-    return 31 - __builtin_clz(n);
-#endif
-#else
-// Handle non-Windows platforms. You can further differentiate between 32-bit and 64-bit if needed.
-#if defined(__LP64__)
-    return 63 - __builtin_clzll(n);
-#else
-    return 31 - __builtin_clz(n);
-#endif
-#endif
+}
+
+SZ_INTERNAL sz_size_t sz_size_log2i(sz_size_t n) {
+    if (n == 0) abort(); // undefined
+    int lz = sz_leading_zeros64(n);
+    int msb = 63 - sz_leading_zeros64(n);
+    SZ_ASSERT(msb >= 0, "some bit somewhere would have to be set");
+    sz_u64_t minexp = (1ull << msb);
+    sz_u64_t mask = minexp - 1;
+    // To round up, increase by 1 if there is any residue beyond the log
+    return msb + ((n & mask) != 0);
 }
 
 /**
  *  @brief  Compute the smallest power of two greater than or equal to ::n.
  */
 SZ_INTERNAL sz_size_t sz_size_bit_ceil(sz_size_t n) {
-    if (n <= 1) return 1;
-    return 1ull << (sz_size_log2i(n - 1) + 1);
+    if (n == 0) return 1;
+    unsigned long long retval = 1ull << sz_size_log2i(n);
+    SZ_ASSERT(retval >= n, "moar bytes");
+    return retval;
 }
 
 /**
@@ -1769,9 +1764,9 @@ SZ_INTERNAL sz_size_t _sz_edit_distance_serial_over256bytes( //
     // not the larger.
     if (b_length > a_length) return _sz_edit_distance_serial_over256bytes(b, b_length, a, a_length, bound, alloc);
 
-    sz_size_t buffer_length = (b_length + 1) * 2;
-    sz_ptr_t buffer = alloc->allocate(buffer_length, alloc->handle);
-    sz_size_t *previous_distances = (sz_size_t *)buffer;
+    sz_size_t buffer_length = sizeof(sz_size_t) * ((b_length + 1) * 2);
+    sz_size_t *distances = (sz_size_t *)alloc->allocate(buffer_length, alloc->handle);
+    sz_size_t *previous_distances = distances;
     sz_size_t *current_distances = previous_distances + b_length + 1;
 
     for (sz_size_t idx_b = 0; idx_b != (b_length + 1); ++idx_b) previous_distances[idx_b] = idx_b;
@@ -1794,7 +1789,7 @@ SZ_INTERNAL sz_size_t _sz_edit_distance_serial_over256bytes( //
 
         // If the minimum distance in this row exceeded the bound, return early
         if (min_distance >= bound) {
-            alloc->free(buffer, buffer_length, alloc->handle);
+            alloc->free(distances, buffer_length, alloc->handle);
             return bound;
         }
 
@@ -1805,7 +1800,7 @@ SZ_INTERNAL sz_size_t _sz_edit_distance_serial_over256bytes( //
     }
 
     sz_size_t result = previous_distances[b_length] < bound ? previous_distances[b_length] : bound;
-    alloc->free(buffer, buffer_length, alloc->handle);
+    alloc->free(distances, buffer_length, alloc->handle);
     return result;
 }
 
@@ -1854,9 +1849,9 @@ SZ_PUBLIC sz_ssize_t sz_alignment_score_serial(       //
     // not the larger.
     if (b_length > a_length) return sz_alignment_score_serial(b, b_length, a, a_length, gap, subs, alloc);
 
-    sz_size_t buffer_length = (b_length + 1) * 2;
-    sz_ptr_t buffer = alloc->allocate(buffer_length, alloc->handle);
-    sz_ssize_t *previous_distances = (sz_ssize_t *)buffer;
+    sz_size_t buffer_length = sizeof(sz_ssize_t) * (b_length + 1) * 2;
+    sz_ssize_t *distances = (sz_ssize_t*)alloc->allocate(buffer_length, alloc->handle);
+    sz_ssize_t *previous_distances = distances;
     sz_ssize_t *current_distances = previous_distances + b_length + 1;
 
     for (sz_size_t idx_b = 0; idx_b != (b_length + 1); ++idx_b) previous_distances[idx_b] = idx_b;
@@ -1879,7 +1874,7 @@ SZ_PUBLIC sz_ssize_t sz_alignment_score_serial(       //
         current_distances = temp;
     }
 
-    alloc->free(buffer, buffer_length, alloc->handle);
+    alloc->free(distances, buffer_length, alloc->handle);
     return previous_distances[b_length];
 }
 
